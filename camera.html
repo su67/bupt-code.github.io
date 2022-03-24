@@ -1,0 +1,216 @@
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title> 微信扫一扫</title>
+</head>
+
+<body>
+	<div>
+		<!-- 内容主体区域 -->
+		<input type="button" id="wxform" value="扫一扫" style="width: 200px;height:60px;">
+		<div id="video_overlays" style="display: none;">
+			<img id="video_overlays_top" src="imgs/wechat-top.png" style="width: 100%">
+			<img id="video_overlays_body" src="imgs/bar.png" style="width: 100%">
+			<img id="video_overlays_bottom" src="imgs/wechat-bottom.png" style="width: 100%">
+		</div>
+		<video id="video" height="100%" style="display: none;"></video>
+		<div id="loader" class="frame-loader" style="display: none;">
+			<img class="frame_load_img" src="imgs/loading.png">
+		</div>
+	</div>
+</body>
+
+<style>
+#video_overlays_top {
+	position:absolute;
+	z-index:300000;
+	top:0px;
+	left:0px;
+}
+#video_overlays_bottom {
+	position:absolute;
+	z-index:300000;
+	bottom:-5px;
+	left:0px;
+}
+.frame_load_img {
+	display: inline-block;
+	width: 50px;
+	animation: haha1 1.5s linear infinite;
+	-webkit-animation: haha1 1s linear infinite;
+}
+.frame-loader {
+	position: fixed;
+	z-index: 999;
+	top: 50%;
+	left: 50%;
+	transform: translate3d(-50%, -50%, 0);
+}
+@-webkit-keyframes haha1 {0% {-webkit-transform: rotate(0deg);}25% {-webkit-transform: rotate(90deg);}50% {-webkit-transform: rotate(180deg);}75% {-webkit-transform: rotate(270deg);}100% {-webkit-transform: rotate(360deg);}}
+#video_overlays_body {
+	position:absolute;
+	top: 35%;
+	animation: haha2 2.5s linear infinite;
+	-webkit-animation: haha2 2.5s linear infinite;
+}
+@-webkit-keyframes haha2 {0% {-webkit-transform: translateY(-400%);}
+50% {-webkit-transform: translateY(40%);}
+75% {-webkit-transform: translateY(260%);}
+90% {-webkit-transform: translateY(392%);opacity: 100%;}
+100% {-webkit-transform: translateY(480%);opacity: 20%;}}
+</style>
+
+</html>
+<script>
+	window.onload = function () {
+		let video = document.getElementById('video');
+		let oP = document.getElementById('wxform');
+
+		function success(stream) {
+			//兼容webkit核心浏览器
+			let CompatibleURL = window.URL || window.webkitURL;
+			//将视频流设置为video元素的源
+			//   console.log(stream);
+
+			//video.src = CompatibleURL.createObjectURL(stream);
+			video.srcObject = stream;
+			video.play();
+		}
+
+		function error(error) {
+			console.log(`访问用户媒体设备失败${error.name}, ${error.message}`);
+		}
+
+		function getStyle(obj, attr) {
+			if (obj.currentStyle) {		//IE
+				return obj.currentStyle[attr];
+			} else {	//ff
+				return getComputedStyle(obj, false)[attr];
+			}
+		}
+
+		// 所有浏览器都可以全屏，使用能力测试
+		document.querySelector("#wxform").onclick = function () {
+			if(getStyle(oP, 'display') === 'none') {
+				oP.style.display = 'block';
+			} else {
+				oP.style.display = 'none';
+			}
+			if(getStyle(video_overlays, 'display') === 'none') {
+				video_overlays.style.display = 'block';
+			} else {
+				video_overlays.style.display = 'none';
+			}
+			if(getStyle(video, 'display') === 'none') {
+				video.style.display = 'block';
+			} else {
+				video.style.display = 'none';
+			}
+			var div = document.body;
+			if (div.requestFullscreen) {
+				div.requestFullscreen();
+			} else if (div.webkitRequestFullScreen) {
+				div.webkitRequestFullScreen();
+			} else if (div.mozRequestFullScreen) {
+				div.mozRequestFullScreen();
+			} else if (div.msRequestFullScreen) {
+				div.msRequestFullScreen();
+			}
+
+			if (navigator.mediaDevices.getUserMedia || navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia) {
+				if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+					console.log("enumerateDevices() not supported.");
+					return;
+				}
+
+				// 列出摄像头和麦克风
+				var exArray = [];
+				navigator.mediaDevices.enumerateDevices()
+					.then(function (devices) {
+						devices.forEach(function (device) {
+							//   console.log(device.kind + ": " + device.label +
+							//       " id = " + device.deviceId);
+							if (device.kind == "videoinput") {
+								//   alert(device.label);
+								exArray.push(device.deviceId);
+							}
+						});
+
+						var mediaOpts = { video: { width: 420, height: 120 } };
+						var mediaOpts = {
+							video: {
+								deviceId: { exact: exArray[1] }
+							}
+						};
+						//调用用户媒体设备, 访问摄像头
+						getUserMedia(mediaOpts, success, error);
+					})
+					.catch(function (err) {
+						console.log(err.name + ": " + err.message);
+					});
+			} else {
+				alert('不支持访问用户媒体');
+			}
+		}
+
+		//访问用户媒体设备的兼容方法
+		function getUserMedia(constraints, success, error) {
+			if (navigator.mediaDevices.getUserMedia) {
+				//最新的标准API
+				navigator.mediaDevices.getUserMedia(constraints).then(success).catch(error);
+			} else if (navigator.webkitGetUserMedia) {
+				//webkit核心浏览器
+				navigator.webkitGetUserMedia(constraints, success, error)
+			} else if (navigator.mozGetUserMedia) {
+				//firfox浏览器
+				navigator.mozGetUserMedia(constraints, success, error);
+			} else if (navigator.getUserMedia) {
+				//旧版API
+				navigator.getUserMedia(constraints, success, error);
+			}
+		}
+
+		var img = new Image();
+		document.getElementById('video_overlays').addEventListener('click', function () {
+			if(getStyle(video, 'display') === 'none') {
+				video.style.display = 'block';
+			} else {
+				video.style.display = 'none';
+			}
+			if(getStyle(video_overlays, 'display') === 'none') {
+				video_overlays.style.display = 'block';
+			} else {
+				video_overlays.style.display = 'none';
+			}
+			// 退出全屏,只能使用document实现
+			if (document.cancelFullscreen) {
+				document.cancelFullscreen();
+			} else if (document.webkitCancelFullScreen) {
+				document.webkitCancelFullScreen();
+			} else if (document.mozCancelFullScreen) {
+				document.mozCancelFullScreen();
+			} else if (document.msCancelFullScreen) {
+				document.msCancelFullScreen();
+			}
+			if(getStyle(loader, 'display') === 'none') {
+				loader.style.display = 'block';
+			} else {
+				loader.style.display = 'none';
+			}
+			setTimeout(function () {
+				if(getStyle(loader, 'display') === 'none') {
+					loader.style.display = 'block';
+				} else {
+					loader.style.display = 'none';
+				}
+				if(getStyle(oP, 'display') === 'none') {
+					oP.style.display = 'block';
+				} else {
+					oP.style.display = 'none';
+				}
+			}, 1500);
+		})
+	}
+
+</script>
